@@ -9,8 +9,8 @@ matplotlib.rcParams.update({'font.size': 16})
 from matplotlib.pylab import *
 from numpy import *
 
-SimTime = 10
-C = 5.0
+SimTime = 20
+C = 10.0
 dNread = 20
 freq = 8
 N = 200

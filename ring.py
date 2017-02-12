@@ -11,9 +11,14 @@ from numpy import *
 seed(0)
 
 # if CalcMode is equal to 0 then a single realisation is calculated and then printed
+
 # if CalcMode is equal to 1 then realisation for different U is calculated and saved into files
-# in CalcRane is equal to 2 then I0 vs U curve is calculated by bisection method
-CalcMode = 0
+
+# if CalcMode is equal to 2 then U is set from argv and then single realisation is calculated
+# can be used for parallel calculation with GNU parallel
+
+# in CalcRane is equal to 3 then I0 vs U curve is calculated by bisection method
+CalcMode = 2
 
 SimTime = 20.0        # seconds
 h = 0.002             # seconds
@@ -31,6 +36,8 @@ Ierange = [-1.170, -0.917, -0.669, -0.485, -0.485, -0.542, -0.711,
 #%%
 U = 0.2
 I0 = Ierange[int(U/0.05) - 1]
+#U = 0.0
+#I0 = Ierange[0]
 
 D = 2.0
 J0 = -12
@@ -103,7 +110,7 @@ def integrate():
         if t % int(pltSampl/h) == 0:
             ActM[int(t/(pltSampl/h))] = m
             ActX[int(t/(pltSampl/h))] = x
-        if CalcMode != 2:
+        if CalcMode != 3:
             for idx, Nread in enumerate(Nreads):
                 R[t+1, idx] = R[t, idx] + (-R[t, idx] + sum(exp(1j*th[choises[idx]])*poisson(m[choises[idx]]*h, Nread)))*h/tau_r
 
@@ -148,6 +155,7 @@ if CalcMode == 0:
     setp(axM.get_xticklabels(), visible=False)
     axM.set_title('$U={}\quad I_0={:.2f}$'.format(U, I0))
 
+#    axSpec.plot(arange(0, SimTime, pltSampl), mean(ActM))
     axSpec.plot(stime, abs(R[:, -1]))
     setp(axSpec.get_xticklabels(), visible=False)
     axSpec.set_ylabel(r"$|R|$")
@@ -162,6 +170,11 @@ if CalcMode == 0:
     axEx.set_xlim([0, 5])
     axEx.locator_params(axis = 'y', nbins=3)
     axEx.set_xlabel(r"$Time [s]$")
+
+    # errR shape lags, Nreads, Number of stimulus
+    errR = calcErrDiffNread()
+    errs = amin(mean(errR[:, -1, :], axis=1)*360/(4*np.pi))
+
 elif CalcMode == 1:
     for U, I0 in zip(Urange, Ierange):
         integrate()
@@ -170,6 +183,15 @@ elif CalcMode == 1:
         errR = calcErrDiffNread()
         np.save("U_{:.2f}_C_{:.1f}_N_{:n}_SimTime_{:n}.npy".format(U, C, N, SimTime), errR)
 elif CalcMode == 2:
+    import sys
+    U = float(sys.argv[1])
+    I0 = Ierange[int(U/0.05) - 1]
+    integrate()
+
+    print("Calculating for U: {} (parallel)".format(U))
+    errR = calcErrDiffNread()
+    np.save("U_{:.2f}_C_{:.1f}_N_{:n}_SimTime_{:n}.npy".format(U, C, N, SimTime), errR)
+elif CalcMode == 3:
 #    Iex[:] = 0
     fname = 'U_Iex_SimTime_{:.1f}_h_{:.4f}_D_{:.1f}_N_{:n}_eps_{:.3f}_m_{:.1f}.npy'
 
