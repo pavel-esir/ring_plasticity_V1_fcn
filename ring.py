@@ -17,12 +17,13 @@ seed(0)
 # if CalcMode is equal to 2 then U is set from argv and then single realisation is calculated
 # can be used for parallel calculation with GNU parallel
 
-# in CalcRane is equal to 3 then I0 vs U curve is calculated by bisection method
-CalcMode = 2
+# if CalcMode is equal to 3 then I0 vs U curve is calculated by bisection method
+CalcMode = 0
 
-SimTime = 20.0        # seconds
+
+SimTime = 50.0        # seconds
 h = 0.002             # seconds
-pltSampl = 0.01       # variable save interval in s
+pltSampl = 0.02       # variable save interval in s
 Tsim = int(SimTime/h)
 
 # to load empirical calculated U vs I0 dependence
@@ -34,7 +35,7 @@ Ierange = [-1.170, -0.917, -0.669, -0.485, -0.485, -0.542, -0.711,
            -2.543, -2.717, -2.855, -3.033, -3.150]
 #Ierange = load('U_Iex_SimTime_20.0_h_0.0020_D_2.0_N_200_eps_0.010_m_{:.1f}.npy'.format(Mm))
 #%%
-U = 0.2
+U = 0.25
 I0 = Ierange[int(U/0.05) - 1]
 #U = 0.0
 #I0 = Ierange[0]
@@ -46,9 +47,10 @@ J1 = 30
 # duration of events in sec
 T = 0.05
 # amplitude of events
-C = 10.
+#C = 20.0
+C = 5.0
 # input poisson events rate, Hz
-freq = 8
+freq = 1000
 
 tau_r = 0.01
 
@@ -56,6 +58,8 @@ tau = 0.01
 tau_n = 0.1
 tau_rec = 0.8
 N = 200
+
+folderName = 'res_h_0.0020_D_2.0_freq_{:.1f}_T_{:.2f}/'.format(freq, T)
 
 stime = arange(0, SimTime, h)
 m = zeros(N)
@@ -77,7 +81,7 @@ del alpha, beta
 Nev = int(freq*SimTime)
 
 # times of Poisson events have exponential distribution
-inpTimes = (exponential(1/freq, Nev) + 2*T).cumsum()/h
+inpTimes = (exponential(1/freq, Nev) + T).cumsum()/h
 inpTimes = array(inpTimes[inpTimes < Tsim - 2*T/h], dtype='int')
 
 # cutoff events which occur later than simulation time
@@ -90,9 +94,10 @@ for t, theta in zip(inpTimes, inpTheta):
     Iex[t:int(t + T/h)] = C
     ThetaEs[t:int(t + T/h)] = theta
 
-
 Nreads = linspace(int(N/10), N, 10, dtype='int')
 R = zeros((Tsim, len(Nreads)), dtype='complex')
+
+exactR = zeros(Tsim, dtype='complex')
 
 choises = [[]]*len(Nreads)
 for idx, n in enumerate(Nreads):
@@ -110,6 +115,7 @@ def integrate():
         if t % int(pltSampl/h) == 0:
             ActM[int(t/(pltSampl/h))] = m
             ActX[int(t/(pltSampl/h))] = x
+        exactR[t+1] = sum(exp(1j*th)*m)/N
         if CalcMode != 3:
             for idx, Nread in enumerate(Nreads):
                 R[t+1, idx] = R[t, idx] + (-R[t, idx] + sum(exp(1j*th[choises[idx]])*poisson(m[choises[idx]]*h, Nread)))*h/tau_r
@@ -155,42 +161,70 @@ if CalcMode == 0:
     setp(axM.get_xticklabels(), visible=False)
     axM.set_title('$U={}\quad I_0={:.2f}$'.format(U, I0))
 
-#    axSpec.plot(arange(0, SimTime, pltSampl), mean(ActM))
-    axSpec.plot(stime, abs(R[:, -1]))
+    axSpec.plot(stime, abs(exactR))
+#    axSpec.plot(stime, abs(R[:, -1]))
+#    axSpec.plot(arange(0, SimTime, pltSampl), mean(ActM, axis=1))
     setp(axSpec.get_xticklabels(), visible=False)
     axSpec.set_ylabel(r"$|R|$")
 
-    axAngle.plot(stime, angle(R[:, -1])*360/(4*pi))
+    axAngle.plot(stime, angle(exactR)*360/(4*pi))
+#    axAngle.plot(stime, angle(R[:, -1])*360/(4*pi))
     axAngle.hlines(inpTheta*360/(4*pi), inpTimes*h, inpTimes*h + T, 'r', linewidth=3)
     setp(axAngle.get_xticklabels(), visible=False)
     axAngle.set_ylabel(r"$angle(R)$")
 
     axEx.plot(stime, Iex, 'r')
     axEx.set_ylim([0, C + 1])
-    axEx.set_xlim([0, 5])
+    axEx.set_xlim([0, 50])
     axEx.locator_params(axis = 'y', nbins=3)
     axEx.set_xlabel(r"$Time [s]$")
 
-    # errR shape lags, Nreads, Number of stimulus
     errR = calcErrDiffNread()
-    errs = amin(mean(errR[:, -1, :], axis=1)*360/(4*np.pi))
 
+    # errR shape lags, Nreads, Number of stimulus
+    minLags = argmin(mean(errR, axis=2), axis=0)
+    minLagErr = amin(mean(errR, axis=2), axis=0)*360/(4*np.pi)
+
+    print("Lags for minimal error {}".format(minLags))
+    print("Minimal errors {}".format(minLagErr))
+
+    df = mean(ma.array(abs(R[:, -1]), mask=Iex))
+    print("Mean value between intervals {}".format(mean(df)))
+
+    df = mean(ma.array(abs(R[:, -1]), mask=~array(Iex, dtype='bool')))
+    print("Mean value when stimulus apply {}".format(mean(df)))
+#%%
 elif CalcMode == 1:
     for U, I0 in zip(Urange, Ierange):
         integrate()
         print("Calculating for U: {}".format(U))
 
         errR = calcErrDiffNread()
-        np.save("U_{:.2f}_C_{:.1f}_N_{:n}_SimTime_{:n}.npy".format(U, C, N, SimTime), errR)
+        np.save(folderName + 'U_{:.2f}_C_{:.1f}_N_{:n}_SimTime_{:n}.npy'.format(U, C, N, SimTime), errR)
 elif CalcMode == 2:
     import sys
     U = float(sys.argv[1])
     I0 = Ierange[int(U/0.05) - 1]
+#    U = 0.0
+#    I0 = Ierange[0]
     integrate()
 
-    print("Calculating for U: {} (parallel)".format(U))
     errR = calcErrDiffNread()
-    np.save("U_{:.2f}_C_{:.1f}_N_{:n}_SimTime_{:n}.npy".format(U, C, N, SimTime), errR)
+    minLags = argmin(mean(errR, axis=2), axis=0)
+    minLagErr = amin(mean(errR, axis=2), axis=0)*360/(4*np.pi)
+
+    print("Lags for minimal error {}".format(minLags))
+    print("Minimal errors {}".format(minLagErr))
+
+    df = mean(ma.array(abs(R[:, -1]), mask=Iex))
+    print("Mean value between intervals {}".format(mean(df)))
+
+    df = mean(ma.array(abs(R[:, -1]), mask=~array(Iex, dtype='bool')))
+    print("Mean value when stimulus apply {}".format(mean(df)))
+
+    print("Calculating for U: {} (parallel)".format(U))
+
+    np.save(folderName + 'U_{:.2f}_C_{:.1f}_N_{:n}_SimTime_{:n}.npy'.format(U, C, N, SimTime), errR)
 elif CalcMode == 3:
 #    Iex[:] = 0
     fname = 'U_Iex_SimTime_{:.1f}_h_{:.4f}_D_{:.1f}_N_{:n}_eps_{:.3f}_m_{:.1f}.npy'
