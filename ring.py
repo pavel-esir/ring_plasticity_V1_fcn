@@ -21,7 +21,7 @@ seed(0)
 CalcMode = 0
 
 
-SimTime = 50.0        # seconds
+SimTime = 20.0        # seconds
 h = 0.002             # seconds
 pltSampl = 0.02       # variable save interval in s
 Tsim = int(SimTime/h)
@@ -45,12 +45,12 @@ J0 = -12
 J1 = 30
 
 # duration of events in sec
-T = 0.05
+T = 1.00
 # amplitude of events
 #C = 20.0
-C = 5.0
+C = 10.0
 # input poisson events rate, Hz
-freq = 1000
+freq = 100
 
 tau_r = 0.01
 
@@ -81,7 +81,7 @@ del alpha, beta
 Nev = int(freq*SimTime)
 
 # times of Poisson events have exponential distribution
-inpTimes = (exponential(1/freq, Nev) + T).cumsum()/h
+inpTimes = (exponential(1/freq, Nev) + 2*T).cumsum()/h
 inpTimes = array(inpTimes[inpTimes < Tsim - 2*T/h], dtype='int')
 
 # cutoff events which occur later than simulation time
@@ -132,14 +132,24 @@ def estimErrDiffNread(lag=0):
 
     return errEsR
 
+def estimErrExactR(lag=0):
+    errEsR = zeros(Nev)
+    for i, (t, theta) in enumerate(zip(inpTimes, inpTheta)):
+        nev = abs(angle(exactR[t + lag:int(t + lag + T/h)]) - ThetaEs[t:int(t + T/h)])
+        anglDiff = amin([nev, 2*pi - nev], axis=0)
+        errEsR[i] = mean(anglDiff)
+    return errEsR
+
 def calcErrDiffNread():
     lags = arange(0, int(T/h), 1, dtype='int')
 
     errR = zeros((len(lags), len(Nreads), Nev))
+    errExactR = zeros((len(lags), Nev))
 
     for j, lag in enumerate(lags):
         errR[j] = estimErrDiffNread(lag)
-    return errR
+        errExactR[j] = estimErrExactR(lag)
+    return errR, errExactR
 
 if CalcMode == 0:
     integrate()
@@ -178,28 +188,34 @@ if CalcMode == 0:
     axEx.set_xlim([0, 50])
     axEx.locator_params(axis = 'y', nbins=3)
     axEx.set_xlabel(r"$Time [s]$")
-
-    errR = calcErrDiffNread()
+#%%
+    errR, errExactR = calcErrDiffNread()
 
     # errR shape lags, Nreads, Number of stimulus
-    minLags = argmin(mean(errR, axis=2), axis=0)
+    minLags = argmin(mean(errR, axis=2), axis=0)*h*1000
     minLagErr = amin(mean(errR, axis=2), axis=0)*360/(4*np.pi)
 
-    print("Lags for minimal error {}".format(minLags))
+    print("Lags for minimal error {} ms".format(minLags))
     print("Minimal errors {}".format(minLagErr))
 
+    minLag = argmin(mean(errExactR, axis=-1), axis=0)*h*1000
+    minErr = amin(mean(errExactR, axis=-1), axis=0)*360/(4*np.pi)
+
+    print("Lag for minimal error {} ms (exact PV)".format(minLag))
+    print("Minimal error {} (exact PV)".format(minErr))
+
     df = mean(ma.array(abs(R[:, -1]), mask=Iex))
-    print("Mean value between intervals {}".format(mean(df)))
+#    print("Mean value between intervals {}".format(mean(df)))
 
     df = mean(ma.array(abs(R[:, -1]), mask=~array(Iex, dtype='bool')))
-    print("Mean value when stimulus apply {}".format(mean(df)))
+#    print("Mean value when stimulus apply {}".format(mean(df)))
 #%%
 elif CalcMode == 1:
     for U, I0 in zip(Urange, Ierange):
         integrate()
         print("Calculating for U: {}".format(U))
 
-        errR = calcErrDiffNread()
+        errR, errExactR = calcErrDiffNread()
         np.save(folderName + 'U_{:.2f}_C_{:.1f}_N_{:n}_SimTime_{:n}.npy'.format(U, C, N, SimTime), errR)
 elif CalcMode == 2:
     import sys
@@ -209,22 +225,9 @@ elif CalcMode == 2:
 #    I0 = Ierange[0]
     integrate()
 
-    errR = calcErrDiffNread()
-    minLags = argmin(mean(errR, axis=2), axis=0)
-    minLagErr = amin(mean(errR, axis=2), axis=0)*360/(4*np.pi)
-
-    print("Lags for minimal error {}".format(minLags))
-    print("Minimal errors {}".format(minLagErr))
-
-    df = mean(ma.array(abs(R[:, -1]), mask=Iex))
-    print("Mean value between intervals {}".format(mean(df)))
-
-    df = mean(ma.array(abs(R[:, -1]), mask=~array(Iex, dtype='bool')))
-    print("Mean value when stimulus apply {}".format(mean(df)))
-
-    print("Calculating for U: {} (parallel)".format(U))
-
+    errR, errExactR = calcErrDiffNread()
     np.save(folderName + 'U_{:.2f}_C_{:.1f}_N_{:n}_SimTime_{:n}.npy'.format(U, C, N, SimTime), errR)
+    np.save(folderName + 'U_{:.2f}_C_{:.1f}_N_{:n}_SimTime_{:n}_exactPV.npy'.format(U, C, N, SimTime), errExactR)
 elif CalcMode == 3:
 #    Iex[:] = 0
     fname = 'U_Iex_SimTime_{:.1f}_h_{:.4f}_D_{:.1f}_N_{:n}_eps_{:.3f}_m_{:.1f}.npy'
