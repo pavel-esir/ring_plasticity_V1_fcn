@@ -18,10 +18,10 @@ seed(0)
 # can be used for parallel calculation with GNU parallel
 
 # if CalcMode is equal to 3 then I0 vs U curve is calculated by bisection method
-CalcMode = 2
+CalcMode = 0
 
 
-SimTime = 200.0        # seconds
+SimTime = 10.0        # seconds
 h = 0.002             # seconds
 pltSampl = 0.02       # variable save interval in s
 Tsim = int(SimTime/h)
@@ -34,7 +34,7 @@ Ierange = [-1.170, -0.917, -0.669, -0.485, -0.485, -0.542, -0.711,
            -0.934, -1.154, -1.398, -1.690, -1.950, -2.256, -2.389,
            -2.543, -2.717, -2.855, -3.033, -3.150]
 #%%
-U = 0.25
+U = 0.05
 I0 = Ierange[int(U/0.05) - 1]
 
 D = 2.0
@@ -42,11 +42,11 @@ J0 = -12
 J1 = 30
 
 # duration of events in sec
-T = 0.05
+T = 0.2
 # amplitude of events
-C = 10.0
+C = 20.0
 # input poisson events rate, Hz
-freq = 8
+freq = 4
 
 tau_r = 0.01
 
@@ -78,7 +78,7 @@ del alpha, beta
 Nev = int(freq*SimTime)
 
 # times of Poisson events have exponential distribution
-inpTimes = (exponential(1/freq, Nev) + 2*T).cumsum()/h
+inpTimes = (exponential(1/freq, Nev) + T).cumsum()/h
 # cutoff events which occur later than simulation time
 inpTimes = array(inpTimes[inpTimes < Tsim - 2*T/h], dtype='int')
 
@@ -169,44 +169,36 @@ if CalcMode == 0:
     setp(axM.get_xticklabels(), visible=False)
     axM.set_title('$U={}\quad I_0={:.2f}$'.format(U, I0))
 
-    axSpec.plot(stime, abs(exactR), label='ER')
-    axSpec.plot(stime, abs(R[:, -1]), label='R')
+    axSpec.plot(stime, abs(exactR), label='exact readout')
+    axSpec.plot(stime, abs(R[:, 3]*Nreads[3]), label='sparse readout')
+    axSpec.set_ylim([0, 16])
 #    axSpec.plot(arange(0, SimTime, pltSampl), mean(ActM, axis=1))
     setp(axSpec.get_xticklabels(), visible=False)
     axSpec.set_ylabel(r"$|R|$")
     axSpec.legend(fontsize=16., loc='upper right')
 
-    axAngle.plot(stime, angle(exactR)*360/(4*pi), '-', label='angle(ER)')
-    axAngle.plot(stime, angle(R[:, -1])*360/(4*pi), label='angle(R)')
-    axAngle.hlines(inpTheta*360/(4*pi), inpTimes*h, inpTimes*h + T, 'C3', lw=2.)
+    axAngle.plot(stime, angle(exactR)*360/(4*pi), label='exact readout')
+    axAngle.plot(stime, angle(R[:, 3])*360/(4*pi), label='sparse readout')
+    axAngle.hlines(inpTheta*360/(4*pi), inpTimes*h, inpTimes*h + T, 'C3', lw=5.)
     axAngle.set_ylim([-55, 55])
     axAngle.legend(fontsize=16., loc='lower right')
 
-#    setp(axAngle.get_xticklabels(), visible=False)
     axAngle.set_ylabel(r"$angle(R)$")
 #    axEx.set_xlim([0, SimTime])
     axAngle.set_xlim((4.59, 5.81))
-    
-#    axEx.plot(stime, Iex, 'r')
-#    axEx.set_ylim([0, C + 1])
-#    axEx.set_yticklabels((0, 20))
-##    axEx.set_xlim([0, SimTime])
-#    axEx.set_xlim((4.59, 5.81))
-#    axEx.locator_params(axis = 'y', nbins=2)
-#    axEx.set_xlabel(r"$Time [s]$")
-    savefig('U_{}.png'.format(U), dpi=260.)
+#    savefig('U_{}.png'.format(U), dpi=260.)
     #%%
     figure(figsize=(4*2.3, 3*2.3))
     plot(stime, angle(exactR)*360/(4*pi), label='exact readout')
-    plot(stime, angle(R[:, -1])*360/(4*pi),  label='sparse readout')
+    plot(stime, angle(R[:, 3])*360/(4*pi),  label='sparse readout')
     hlines(inpTheta*360/(4*pi), inpTimes*h, inpTimes*h + T, 'C3', linewidth=2.)
     ylim([-90, 90])
     legend(fontsize=16., loc='upper right')
-    xlim((4.66, 4.86))
-    ylim((-54.0, -19.0))
+    xlim((5.56, 5.8))
+    ylim((-11.0, 31.0))
     xlabel('Time[s]')
     ylabel('angle(R)')
-    savefig('angle_U_{}.png'.format(U), dpi=260.)
+#    savefig('angle_U_{}.png'.format(U), dpi=260.)
     #%%
 #    figure(figsize=(4*2.5, 3*2.5))
 #    gs = GridSpec(2, 2, height_ratios=[1, 1], width_ratios=[30, 1])
@@ -226,6 +218,7 @@ if CalcMode == 0:
 #    axSpec.set_ylabel(r"$<m>$")
 #    axSpec.set_xlabel(r"$Time [s]$")
 #    axSpec.set_xlim((0, SimTime))
+#    axSpec.set_ylim((0, 0.75))
 #    savefig('no_stim_U_{}.png'.format(U), dpi=260.)
 #%%
     errR, errExactR = calcErrDiffNread()
@@ -261,15 +254,13 @@ elif CalcMode == 2:
     import sys
     U = float(sys.argv[1])
     I0 = Ierange[int(U/0.05) - 1]
-#    U = 0.0
-#    I0 = Ierange[0]
     integrate()
 
     errR, errExactR = calcErrDiffNread()
     save(folderName + 'U_{:.2f}_C_{:.1f}_N_{:n}_SimTime_{:n}.npy'.format(U, C, N, SimTime), errR)
     save(folderName + 'U_{:.2f}_C_{:.1f}_N_{:n}_SimTime_{:n}_exactPV.npy'.format(U, C, N, SimTime), errExactR)
 elif CalcMode == 3:
-#    Iex[:] = 0
+    Iex[:] = 0
     fname = 'U_Iex_SimTime_{:.1f}_h_{:.4f}_D_{:.1f}_N_{:n}_eps_{:.3f}_m_{:.1f}.npy'
 
     Eps = .01
