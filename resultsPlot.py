@@ -10,7 +10,7 @@ from matplotlib.pylab import *
 from numpy import *
 
 SimTime = 2000
-C = 40.0
+C = 5.0
 dNread = 20
 freq = 4
 T = 0.05
@@ -19,7 +19,7 @@ Mm = 0.5
 
 Nreads = arange(dNread, N + 1, dNread, dtype='int')
 Urange = arange(0.05, 0.951, 0.05)
-#Ierange = load('U_Iex_SimTime_20.0_h_0.0020_D_2.0_N_200_eps_0.010_m_{:.1f}.npy'.format(Mm))
+#Ierange = load('U_Iex_Simime_20.0_h_0.0020_D_2.0_N_200_eps_0.010_m_{:.1f}.npy'.format(Mm))
 
 #folderName = 'res_h_0.0020_D_2.0_freq_{:.1f}_T_{:.2f}/'.format(freq, T)
 folderName = 'res_h_0.0020_D_2.0_freq_{:.1f}_T_{:.2f}_m_{:.1f}/'.format(freq, T, Mm)
@@ -68,7 +68,7 @@ title('$C={}$'.format(C))
 legend(loc='upper right', fontsize=14.0)
 xlabel('U')
 ylabel('$Error[degree \; ^{\circ}$]')
-savefig("Freq_{}_C_{}_Tsim_{}_mean_{}_N_{}.png".format(freq, C, SimTime, Mm, N), dpi=260.)
+#savefig("Freq_{}_C_{}_Tsim_{}_mean_{}_N_{}.png".format(freq, C, SimTime, Mm, N), dpi=260.)
 
 figure(2, figsize=(4*2.5, 3*2.5))
 plot(Urange, minLagsExact*2, '--o', label='exact readout')
@@ -76,7 +76,7 @@ title('$C={}$'.format(C))
 legend(loc='upper right', fontsize=14.0)
 xlabel('U')
 ylabel('$lag[ms]$')
-savefig("lag_Freq_{}_C_{}_Tsim_{}_mean_{}_N_{}.png".format(freq, C, SimTime, Mm, N), dpi=260.)
+#savefig("lag_Freq_{}_C_{}_Tsim_{}_mean_{}_N_{}.png".format(freq, C, SimTime, Mm, N), dpi=260.)
 
 #%%
 figure(3, figsize=(4*2.5, 3*2.5))
@@ -84,4 +84,4 @@ figure(3, figsize=(4*2.5, 3*2.5))
 plot(Nreads, minErrNread, '-o', label='$C= {}$'.format(C))
 xlabel(r'$N_{read}$')
 ylabel(r'U for minimal error')
-savefig("U_for_min_Freq_{}_C_{}_Tsim_{}_mean_{}_N_{}.png".format(freq, C, SimTime, Mm, N), dpi=260.)
+#savefig("U_for_min_Freq_{}_C_{}_Tsim_{}_mean_{}_N_{}.png".format(freq, C, SimTime, Mm, N), dpi=260.)

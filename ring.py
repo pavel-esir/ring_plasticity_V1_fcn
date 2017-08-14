@@ -34,7 +34,7 @@ Ierange = [-1.170, -0.917, -0.669, -0.485, -0.485, -0.542, -0.711,
            -0.934, -1.154, -1.398, -1.690, -1.950, -2.256, -2.389,
            -2.543, -2.717, -2.855, -3.033, -3.150]
 #%%
-U = 0.05
+U = 0.6
 I0 = Ierange[int(U/0.05) - 1]
 
 D = 2.0
@@ -184,9 +184,10 @@ if CalcMode == 0:
     axAngle.legend(fontsize=16., loc='lower right')
 
     axAngle.set_ylabel(r"$angle(R)$")
+    axAngle.set_xlabel('Time[s]')
 #    axEx.set_xlim([0, SimTime])
     axAngle.set_xlim((4.59, 5.81))
-#    savefig('U_{}.png'.format(U), dpi=260.)
+    savefig('U_{}.png'.format(U), dpi=260.)
     #%%
     figure(figsize=(4*2.3, 3*2.3))
     plot(stime, angle(exactR)*360/(4*pi), label='exact readout')
