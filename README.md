@@ -1,6 +1,6 @@
 Rate model network with ring connection architecture and short-term synaptic depression. Represents a cortical hypercolumn in visual coretex V1.
 
-Used to perform calculations for the paper https://www.frontiersin.org/articles/10.3389/fncom.2017.00021/full
+Was used to perform calculations for the paper https://www.frontiersin.org/articles/10.3389/fncom.2017.00021/full
 
 ring.py is the main script which by default calculates a single trace and plots it
 
