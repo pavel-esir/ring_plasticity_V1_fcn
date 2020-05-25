@@ -1,7 +1,7 @@
-Rate model network with ring connection architecture and short-term synaptic depression, represents a cortical hypercolumn in visual area V1.
-Used to perform calculations for paper submitted to Frontiers in Computational Neuroscience
+Rate model network with ring connection architecture and short-term synaptic depression. Represents a cortical hypercolumn in visual coretex V1.
+Used to perform calculations for a paper submitted to Frontiers in Computational Neuroscience
 
-ring.py is the main script which by default plots single realisation 
+ring.py is the main script which by default calculates a single trace and plots it
 
 Variable CalcMode on 16th line defines calculation mode:
 * for value 0 single realisation with amplitude of visual stimuli C = 10 is calculated and then printed.
